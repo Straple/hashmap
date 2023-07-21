@@ -23,3 +23,5 @@ if (NOT DEFINED PNG_FOUND)
 endif()
 
 add_catch(test_hashmap test.cpp)
+
+add_executable(main main.cpp)

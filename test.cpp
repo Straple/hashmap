@@ -1,29 +1,94 @@
+#include <hashmap.h>
 #include <algorithm>
 #include <catch.hpp>
 #include <chrono>
-#include <hashmap.h>
 #include <iostream>
 #include <list>
+#include <map>
 #include <unordered_map>
 #include <utility>
 #include <vector>
 
 using namespace std::chrono;
 
-/*TEST_CASE("my stress test") {
-    HashMap<int, std::string> my_map;
+template <typename K, typename V>
+using map_t = hashmap<K, V>;
+
+TEST_CASE("smart-types") {
+    map_t<std::string, std::string> map;
+    map["hello"] = "world!";
+    {
+        REQUIRE(map["hello"] == "world!");
+        REQUIRE(map.size() == 1);
+        REQUIRE(map["abracadabra"] == "");
+        REQUIRE(map.size() == 2);
+    }
+
+    map.insert({"hello", "new world!"});
+    {
+        REQUIRE(map.size() == 2);
+        // insert не изменяет value, если там такой уже был
+        // он может только добавить новый
+        REQUIRE(map["hello"] == "world!");
+        REQUIRE(map["abracadabra"] == "");
+    }
+
+    REQUIRE(map.erase("hello") == true);
+    {
+        REQUIRE(map.size() == 1);
+        REQUIRE(map.find("hello") == map.end());
+        REQUIRE(map["abracadabra"] == "");
+        REQUIRE(map.size() == 1);
+    }
+
+    REQUIRE(map.erase("lolasodkaoskdjiawhufa") == false);
+    {
+        REQUIRE(map.size() == 1);
+        REQUIRE(map.find("abracadabra") != map.end());
+        REQUIRE(map.find("abracadabra")->second == "");
+    }
+
+    map.insert({"bla-bla", "123"});
+    map.insert({"C++", "17"});
+    map.insert({"C++", "20"});
+    {
+        // "abracadabra" -> ""
+        // "bla-bla" -> "123"
+        // "C++" -> "17"
+        REQUIRE(map.size() == 3);
+
+        REQUIRE(map.find("abracadabra") != map.end());
+        REQUIRE(map.find("abracadabra")->second == "");
+
+        REQUIRE(map.find("bla-bla") != map.end());
+        REQUIRE(map.find("bla-bla")->second == "123");
+
+        REQUIRE(map.find("C++") != map.end());
+        REQUIRE(map.find("C++")->second == "17");
+    }
+
+    map.clear();
+    {
+        REQUIRE(map.size() == 0);
+        REQUIRE(map.empty());
+        REQUIRE(map.begin() == map.end());
+    }
+}
+
+TEST_CASE("permute stress") {
+    hashmap<int, std::string> my_map;
     std::unordered_map<int, std::string> stl_map;
 
     auto verify = [&]() {
         REQUIRE(my_map.size() == stl_map.size());
         REQUIRE(my_map.empty() == stl_map.empty());
-        for(auto [x, str] : stl_map){
+        for (auto [x, str] : stl_map) {
             REQUIRE(my_map.find(x) != my_map.end());
             REQUIRE(my_map[x] == str);
         }
     };
 
-    std::vector<int> permut(10);
+    std::vector<int> permut(8);
     iota(permut.begin(), permut.end(), 0);
 
     std::mt19937 gen(42);
@@ -42,9 +107,9 @@ using namespace std::chrono;
         }
 
     } while (next_permutation(permut.begin(), permut.end()));
-}*/
+}
 
-TEST_CASE("my test") {
+TEST_CASE("small test") {
     hashmap<int, std::string> my_map;
     my_map[0] = "hello";
     my_map[1] = "world";
@@ -68,12 +133,13 @@ TEST_CASE("const") {
     REQUIRE(it == map.end());
     std::sort(orig_data.begin(), orig_data.end());
     std::vector<std::pair<int, int>> new_data;
-    for (const auto &elem: map) {
+    for (const auto &elem : map) {
         new_data.push_back(elem);
     }
     std::sort(new_data.begin(), new_data.end());
     REQUIRE(std::equal(
-            orig_data.begin(), orig_data.end(), new_data.begin(), new_data.end()));
+        orig_data.begin(), orig_data.end(), new_data.begin(), new_data.end()
+    ));
 }
 
 TEST_CASE("references") {
@@ -158,13 +224,14 @@ TEST_CASE("backshift") {
     REQUIRE(m.bucket(1100) == 110);
 }
 
-template<class Map>
+template <class Map>
 std::pair<nanoseconds, nanoseconds> RunStress(
-        Map &map,
-        int seed,
-        size_t elems_count,
-        size_t iterations,
-        std::vector<int> &responses) {
+    Map &map,
+    int seed,
+    size_t elems_count,
+    size_t iterations,
+    std::vector<int> &responses
+) {
     std::mt19937 gen(seed);
     std::uniform_int_distribution<int> dist(0, elems_count);
     for (size_t i = 0; i < elems_count; ++i) {
@@ -204,25 +271,46 @@ TEST_CASE("stress") {
         double d[3];
     };
 
-    std::vector<int> ok_responses;
+    std::vector<int> ok_responses, trash_vec;
     ok_responses.reserve(iterations);
     std::vector<int> check_responses;
     check_responses.reserve(iterations);
-    hashmap<int, Data> h(elems_count);
-    std::unordered_map<int, Data> m(elems_count);
+    hashmap<int, Data> my_hash_map(elems_count);
+    std::unordered_map<int, Data> stl_unordered_map(elems_count);
+    std::map<int, Data> stl_map;
 
-    auto [h_duration, h_max] =
-            RunStress(h, seed, elems_count, iterations, check_responses);
-    auto [m_duration, m_max] =
-            RunStress(m, seed, elems_count, iterations, ok_responses);
+    auto [my_duration, my_max] =
+        RunStress(my_hash_map, seed, elems_count, iterations, check_responses);
+
+    auto [stl_unordered_map_duration, stl_unordered_map_max] = RunStress(
+        stl_unordered_map, seed, elems_count, iterations, ok_responses
+    );
+
+    auto [stl_map_duration, stl_map_max] =
+        RunStress(stl_map, seed, elems_count, iterations, trash_vec);
     REQUIRE(check_responses == ok_responses);
 
-    std::cerr << "unordered_map: mean "
-              << duration_cast<nanoseconds>(m_duration).count() / iterations
-              << ", max " << m_max.count() << " ns/iter"
+    std::cerr << "std::map: mean "
+              << duration_cast<nanoseconds>(stl_map_duration).count() /
+                     iterations
+              << ", max " << stl_map_max.count() << " ns/iter"
               << "\n";
-    std::cerr << "hashmap      : mean "
-              << duration_cast<nanoseconds>(h_duration).count() / iterations
-              << ", max " << h_max.count() << " ns/iter"
+
+    std::cerr
+        << "std::unordered_map: mean "
+        << duration_cast<nanoseconds>(stl_unordered_map_duration).count() /
+               iterations
+        << ", max " << stl_unordered_map_max.count() << " ns/iter"
+        << "\n";
+
+    std::cerr << "my hashmap: mean "
+              << duration_cast<nanoseconds>(my_duration).count() / iterations
+              << ", max " << my_max.count() << " ns/iter"
               << "\n";
 }
+
+/*
+std::map: mean 256, max 121455 ns/iter
+std::unordered_map: mean 119, max 101507 ns/iter
+my hashmap: mean 53, max 138203 ns/iter
+*/

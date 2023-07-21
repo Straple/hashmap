@@ -4,21 +4,22 @@
 #include <utility>
 #include <vector>
 
-template<class K, class V, class H = std::hash<K>>
+template <class K, class V, class H = std::hash<K>>
 class hashmap {
+    // first is key
+    // second is value
+    using Item = std::pair<K, V>;
+    using Bucket = std::optional<Item>;
+
     H m_hasher;
 
-    struct bucket {
-        // true: пустая, без элемента
-        // false: лежит элемент
-        bool is_free = true;
-
-        std::pair<K, V> data;
-    };
-
-    std::vector<bucket> m_buckets;
+    std::vector<Bucket> m_buckets;
 
     std::size_t m_size = 0;
+
+    //=================//
+    //==INDEX METHODS==//
+    //=================//
 
     // увеличивает индекс на 1 и корректно обрабатывает цикличность корзины
     void increase_index(std::size_t &index) const {
@@ -37,46 +38,67 @@ class hashmap {
     // указатель на первую пустую корзину, если такого ключа нет
     std::size_t find_index(const K &key) const {
         std::size_t index = get_index(key);
-        for (; !m_buckets[index].is_free && m_buckets[index].data.first != key; increase_index(index)) {}
+        for (; m_buckets[index] && !(m_buckets[index]->first == key);
+             increase_index(index)) {
+        }
         return index;
     }
 
-    // при необходимости расширяет корзину, чтобы поддерживать быстрый доступ к элементам
+    //===========================//
+    //==INTERNAL CHANGE METHODS==//
+    //===========================//
+
+    // при необходимости расширяет корзину, чтобы поддерживать быстрый доступ к
+    // элементам
     void update_capacity() {
         if (m_size * 2 <= m_buckets.size()) {
             return;
         }
-        auto save_buckets = std::move(m_buckets);
+        auto old_buckets = std::move(m_buckets);
 
         m_size = 0;
-        m_buckets.resize(save_buckets.size() * 2);
-        for (auto &[is_free, data]: save_buckets) {
-            if (!is_free) {
-                insert(std::move(data));
+        m_buckets.resize(old_buckets.size() * 2);
+
+        for (auto &old_bucket : old_buckets) {
+            if (old_bucket) {
+                insert(std::move(*old_bucket));
             }
         }
     }
 
 public:
-    hashmap(H hasher = H()) : m_hasher(hasher), m_buckets(8) {}
+    //================//
+    //==CONSTRUCTORS==//
+    //================//
+
+    hashmap(H hasher = H()) : m_hasher(hasher), m_buckets(8) {
+    }
 
     // заранее выделяет столько то места для корзины
-    hashmap(size_t elements_count, H hasher = H()) : m_hasher(hasher), m_buckets(elements_count) {}
+    hashmap(std::size_t elements_count, H hasher = H())
+        : m_hasher(hasher), m_buckets(elements_count) {
+    }
 
-    template<class Iterator>
-    hashmap(Iterator first, Iterator last, H hasher = H()) : m_hasher(hasher), m_buckets(8) {
+    template <class Iterator>
+    hashmap(Iterator first, Iterator last, H hasher = H())
+        : m_hasher(hasher), m_buckets(8) {
         for (; first != last; first++) {
             insert(*first);
         }
     }
 
-    hashmap(const std::initializer_list<std::pair<K, V>> &l, H hasher = H()) : m_hasher(hasher), m_buckets(8) {
-        for (auto &val: l) {
+    hashmap(const std::initializer_list<Item> &l, H hasher = H())
+        : m_hasher(hasher), m_buckets(8) {
+        for (auto &val : l) {
             insert(val);
         }
     }
 
-    [[nodiscard]] size_t size() const {
+    //===========//
+    //==GETTERS==//
+    //===========//
+
+    [[nodiscard]] std::size_t size() const {
         return m_size;
     }
 
@@ -84,52 +106,68 @@ public:
         return size() == 0;
     }
 
-    void insert(const K &key, V value) {
-        std::size_t index = find_index(key); // нашли либо пустую ячейку, либо корзину с этим же ключом
-
-        if (m_buckets[index].is_free) {
-            m_size++;
-            m_buckets[index].is_free = false;
-            m_buckets[index].data.first = key;
-        }
-        m_buckets[index].data.second = std::move(value);
-
-        update_capacity();
+    // хеш-функцию нельзя изменять: нарушиться кучу свойств
+    // поэтому передается по const ссылке
+    const H &hash_function() const {
+        return m_hasher;
     }
 
-    void insert(const std::pair<K, V> &elem) {
-        insert(elem.first, elem.second);
+    //================//
+    //==INSERT/ERASE==//
+    //================//
+
+    // ЕСЛИ НЕ БЫЛО элемента с ключом key, то добавляет key->value
+    void insert(const K &key, V value) {
+        // нашли либо пустую ячейку, либо корзину с этим же ключом
+        std::size_t index = find_index(key);
+        if (!m_buckets[index]) {
+            m_size++;
+            m_buckets[index] = std::make_pair(key, std::move(value));
+            update_capacity();
+        }
+    }
+
+    void insert(const Item &item) {
+        insert(item.first, item.second);
     }
 
     // вернет правду, если мы удалили
     bool erase(const K &key) {
         std::size_t index = find_index(key);
 
-        if (m_buckets[index].is_free) {
+        // если такого элемента нет
+        if (!m_buckets[index]) {
             return false;
         }
 
         // удалим этот элемент
         m_size--;
-        m_buckets[index].is_free = true;
+        m_buckets[index].reset();
 
+        // аккуратно переместим все элементы после удаленного так, чтобы в итоге
+        // получили, как если бы никогда не было этого элемента
+
+        // свободное место
         std::size_t free_pos = index;
+
         while (true) {
             increase_index(index);
 
-            if (m_buckets[index].is_free) {
-                break;
+            // дошли до пустого
+            if (!m_buckets[index]) {
+                break;  // закончили с перемещениями
             }
 
-            if (get_index(m_buckets[index].data.first) == index ||
-                get_index(m_buckets[index].data.first) > free_pos) {
-                continue;
+            // если этот элемент уже стоит на нужном месте или он должен стоять
+            // правее чем мы хотим его поставить
+            std::size_t need_index = get_index(m_buckets[index]->first);
+            if (need_index == index || need_index > free_pos) {
+                continue;  // мы не должны его трогать
             }
 
-            m_buckets[free_pos].is_free = false;
-            m_buckets[free_pos].data = std::move(m_buckets[index].data);
+            m_buckets[free_pos] = std::move(m_buckets[index]);
+            m_buckets[index].reset();
 
-            m_buckets[index].is_free = true;
             free_pos = index;
         }
         return true;
@@ -137,35 +175,41 @@ public:
 
     void clear() {
         for (std::size_t index = 0; index < m_buckets.size(); index++) {
-            m_buckets[index].is_free = true;
+            m_buckets[index].reset();
         }
         m_size = 0;
     }
 
     V &operator[](const K &key) {
         std::size_t index = find_index(key);
-        if (m_buckets[index].is_free) {
+        if (!m_buckets[index]) {
             insert(key, V());
             index = find_index(key);
         }
-        return m_buckets[index].data.second;
+        return m_buckets[index]->second;
     }
+
+    //============//
+    //==ITERATOR==//
+    //============//
 
     friend class iterator;
 
     class iterator {
         std::size_t index = -1;
-        const std::vector<bucket> *m_buckets_ptr = nullptr;
+        const std::vector<Bucket> *m_buckets_ptr = nullptr;
 
     public:
         iterator() = default;
 
-        iterator(std::size_t index, const std::vector<bucket> &buckets) : index(index), m_buckets_ptr(&buckets) {}
+        iterator(std::size_t index, const std::vector<Bucket> &buckets)
+            : index(index), m_buckets_ptr(&buckets) {
+        }
 
         iterator &operator++() {
             index++;
-            while (index < m_buckets_ptr->size() && (*m_buckets_ptr)[index].is_free) {
-                index++;
+            for (; index < m_buckets_ptr->size() && !(*m_buckets_ptr)[index];
+                 index++) {
             }
             return *this;
         }
@@ -176,12 +220,12 @@ public:
             return save_it;
         }
 
-        const std::pair<K, V> *operator->() {
-            return &(*m_buckets_ptr)[index].data;
+        const Item *operator->() {
+            return &*(*m_buckets_ptr)[index];
         }
 
-        const std::pair<K, V> &operator*() {
-            return (*m_buckets_ptr)[index].data;
+        const Item &operator*() {
+            return *(*m_buckets_ptr)[index];
         }
 
         bool operator==(const iterator &rhs) const {
@@ -193,9 +237,20 @@ public:
         }
     };
 
-    iterator find(const K &key) const {
+    // вернет индекс корзины, в которой лежит элемент с таким ключом
+    // или -1, если такого элемента нет
+    long long bucket(const K &key) const {
         std::size_t index = find_index(key);
-        if (m_buckets[index].is_free) {
+        if (!m_buckets[index]) {
+            return -1;
+        } else {
+            return static_cast<long long>(index);
+        }
+    }
+
+    iterator find(const K &key) const {
+        long long index = bucket(key);
+        if (index == -1) {
             return end();
         } else {
             return iterator(index, m_buckets);
@@ -204,26 +259,11 @@ public:
 
     iterator begin() const {
         iterator it(-1, m_buckets);
-        ++it;
+        ++it;  // продвигаем до первого элемента
         return it;
     }
 
     iterator end() const {
         return iterator(m_buckets.size(), m_buckets);
-    }
-
-    H hash_function() const {
-        return m_hasher;
-    }
-
-    // вернет индекс корзины, в которой лежит элемент с таким ключом
-    // или -1, если такого элемента нет
-    long long bucket(const K &key) const {
-        std::size_t index = find_index(key);
-        if (m_buckets[index].is_free) {
-            return -1;
-        } else {
-            return static_cast<long long>(index);
-        }
     }
 };
