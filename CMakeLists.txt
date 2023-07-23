@@ -1,4 +1,4 @@
-project(png-decoder)
+project(hashmap)
 
 cmake_minimum_required(VERSION 3.15)
 

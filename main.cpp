@@ -2,15 +2,6 @@
 #include <string>
 #include "hashmap.h"
 
-enum METHOD {
-    DEFAULT_CONSTRUCTOR,
-    COPY_CONSTRUCTOR,
-    MOVE_CONSTRUCTOR,
-    DESTRUCTOR,
-    COPY_ASSIGN,
-    MOVE_ASSIGN,
-};
-
 struct visor_t {
     std::string str;
 

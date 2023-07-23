@@ -14,6 +14,68 @@ using namespace std::chrono;
 template <typename K, typename V>
 using map_t = hashmap<K, V>;
 
+struct noncopyable {
+    int x = 0;
+
+    noncopyable(int x) : x(x) {
+    }
+
+    noncopyable() = default;
+    noncopyable(const noncopyable &) = delete;
+    noncopyable &operator=(const noncopyable &) = delete;
+
+    noncopyable(noncopyable &&) = default;
+    noncopyable &operator=(noncopyable &&) = default;
+
+    friend bool operator==(const noncopyable &lhs, const noncopyable &rhs) {
+        return lhs.x == rhs.x;
+    }
+};
+
+TEST_CASE("noncopyable key and value") {
+    // должно компилироваться
+
+    {
+        hashmap<int, noncopyable> map;
+        map.insert(10, noncopyable(5));
+        noncopyable x(5);
+        map.insert(10, std::move(x));
+        map.insert(std::make_pair(10, noncopyable(5)));
+        map.insert(std::make_pair(10, std::move(x)));
+
+        map.erase(10);
+
+        map[5] = std::move(x);
+        map[5] = 10;
+    }
+
+    {
+        struct hasher {
+            std::size_t operator()(const noncopyable &x) const {
+                return x.x;
+            }
+        };
+
+        hashmap<noncopyable, int, hasher> map;
+        map.insert(noncopyable(5), 10);
+        noncopyable x(5);
+        map.insert(std::move(x), 10);
+
+        map.insert(std::make_pair(noncopyable(5), 10));
+        map.insert(std::make_pair(std::move(x), 10));
+
+        map.erase(5);
+        map.erase(x);
+        map.erase(std::move(x));
+
+        // CE, but should work. need TODO
+        // map[noncopyable(5)] = 10;
+        // map[std::move(x)] = 10;
+
+        // map[x] = 10; // CE OK
+    }
+}
+
 TEST_CASE("smart-types") {
     map_t<std::string, std::string> map;
     map["hello"] = "world!";
@@ -25,6 +87,9 @@ TEST_CASE("smart-types") {
     }
 
     map.insert({"hello", "new world!"});
+    std::pair<std::string, std::string> ss_pair = {"hello", "new world!"};
+    map.insert(ss_pair);
+    map.insert(std::move(ss_pair));
     {
         REQUIRE(map.size() == 2);
         // insert не изменяет value, если там такой уже был
@@ -224,25 +289,29 @@ TEST_CASE("backshift") {
     REQUIRE(m.bucket(1100) == 110);
 }
 
+// returns (mean time, max time)
 template <class Map>
 std::pair<nanoseconds, nanoseconds> RunStress(
     Map &map,
     int seed,
-    size_t elems_count,
-    size_t iterations,
+    std::size_t elems_count,
+    std::size_t iterations,
     std::vector<int> &responses
 ) {
+    responses.reserve(iterations);
+
     std::mt19937 gen(seed);
     std::uniform_int_distribution<int> dist(0, elems_count);
-    for (size_t i = 0; i < elems_count; ++i) {
+    for (std::size_t i = 0; i < elems_count; i++) {
         map.insert({dist(gen), {}});
     }
+
     auto start = steady_clock::now();
-    for (size_t i = 0; i < iterations; ++i) {
+    for (std::size_t i = 0; i < iterations; i++) {
         auto val = dist(gen);
         auto resp = map.erase(val);
         responses.push_back(resp);
-        if (!resp) {
+        if (resp) {
             map.insert({val, {}});
         }
     }
@@ -250,10 +319,10 @@ std::pair<nanoseconds, nanoseconds> RunStress(
     auto duration = stop - start;
 
     nanoseconds max = {};
-    for (size_t i = 0; i < iterations; ++i) {
+    for (std::size_t i = 0; i < iterations; i++) {
         auto val = dist(gen);
         auto start = steady_clock::now();
-        if (!map.erase(val)) {
+        if (map.erase(val)) {
             map.insert({val, {}});
         }
         auto stop = steady_clock::now();
@@ -262,55 +331,86 @@ std::pair<nanoseconds, nanoseconds> RunStress(
     return std::make_pair(duration, max);
 }
 
-TEST_CASE("stress") {
-    const size_t elems_count = 1e5;
-    const size_t iterations = 1e6;
-    const int seed = 12345;
+struct Data {
+    double d[3];
+};
 
-    struct Data {
-        double d[3];
-    };
+template <typename T>
+struct hasher_counter {
+    mutable std::size_t counter = 0;
 
-    std::vector<int> ok_responses, trash_vec;
-    ok_responses.reserve(iterations);
-    std::vector<int> check_responses;
-    check_responses.reserve(iterations);
-    hashmap<int, Data> my_hash_map(elems_count);
-    std::unordered_map<int, Data> stl_unordered_map(elems_count);
-    std::map<int, Data> stl_map;
+    std::size_t operator()(const T &value) const {
+        counter++;
+        return std::hash<T>{}(value);
+    }
+};
 
-    auto [my_duration, my_max] =
-        RunStress(my_hash_map, seed, elems_count, iterations, check_responses);
+template <typename Map>
+struct tester {
+    std::vector<int> responses;
+    nanoseconds duration_time = {}, max_time = {};
+    std::size_t hash_calculation_counter = 0;
 
-    auto [stl_unordered_map_duration, stl_unordered_map_max] = RunStress(
-        stl_unordered_map, seed, elems_count, iterations, ok_responses
-    );
+    const static std::size_t elems_count = 1e6;
+    const static std::size_t iterations = 1e7;
+    const static int seed = 42;
 
-    auto [stl_map_duration, stl_map_max] =
-        RunStress(stl_map, seed, elems_count, iterations, trash_vec);
-    REQUIRE(check_responses == ok_responses);
+    tester() {
+        hasher_counter<int> hasher;
+        Map map(elems_count, std::reference_wrapper(hasher));
+        auto [calc_duration, calc_max] =
+            RunStress(map, seed, elems_count, iterations, responses);
+        duration_time = calc_duration;
+        max_time = calc_max;
+        hash_calculation_counter = hasher.counter;
+    }
 
-    std::cerr << "std::map: mean "
-              << duration_cast<nanoseconds>(stl_map_duration).count() /
-                     iterations
-              << ", max " << stl_map_max.count() << " ns/iter"
-              << "\n";
+    // for std::map
+    tester(int) {
+        Map map;
+        auto [calc_duration, calc_max] =
+            RunStress(map, seed, elems_count, iterations, responses);
+        duration_time = calc_duration;
+        max_time = calc_max;
+    }
 
-    std::cerr
-        << "std::unordered_map: mean "
-        << duration_cast<nanoseconds>(stl_unordered_map_duration).count() /
-               iterations
-        << ", max " << stl_unordered_map_max.count() << " ns/iter"
-        << "\n";
+    void print() {
+        std::cerr << "mean "
+                  << duration_cast<nanoseconds>(duration_time).count() /
+                         iterations
+                  << " ns, max " << max_time.count()
+                  << " ns/iter, hash calc counter " << hash_calculation_counter
+                  << "\n";
+    }
+};
 
-    std::cerr << "my hashmap: mean "
-              << duration_cast<nanoseconds>(my_duration).count() / iterations
-              << ", max " << my_max.count() << " ns/iter"
-              << "\n";
+TEST_CASE("super stress and benchmark") {
+    {
+        tester<std::map<int, Data>> tester(0);
+
+        std::cerr << "std::map, ";
+        tester.print();
+    }
+
+    std::vector<int> ok_responses;
+    {
+        tester<std::unordered_map<
+            int, Data, std::reference_wrapper<hasher_counter<int>>>>
+            tester;
+
+        ok_responses = tester.responses;
+
+        std::cerr << "std::unordered_map, ";
+        tester.print();
+    }
+
+    {
+        tester<hashmap<int, Data, std::reference_wrapper<hasher_counter<int>>>>
+            tester;
+
+        REQUIRE(ok_responses == tester.responses);
+
+        std::cerr << "hashmap, ";
+        tester.print();
+    }
 }
-
-/*
-std::map: mean 256, max 121455 ns/iter
-std::unordered_map: mean 119, max 101507 ns/iter
-my hashmap: mean 53, max 138203 ns/iter
-*/

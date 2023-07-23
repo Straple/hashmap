@@ -76,22 +76,19 @@ public:
 
     // заранее выделяет столько то места для корзины
     hashmap(std::size_t elements_count, H hasher = H())
-        : m_hasher(hasher), m_buckets(elements_count) {
+        : m_hasher(hasher), m_buckets(2 * elements_count) {
     }
 
     template <class Iterator>
     hashmap(Iterator first, Iterator last, H hasher = H())
-        : m_hasher(hasher), m_buckets(8) {
+        : hashmap(2 * std::distance(first, last), hasher) {
         for (; first != last; first++) {
             insert(*first);
         }
     }
 
     hashmap(const std::initializer_list<Item> &l, H hasher = H())
-        : m_hasher(hasher), m_buckets(8) {
-        for (auto &val : l) {
-            insert(val);
-        }
+        : hashmap(l.begin(), l.end(), hasher) {
     }
 
     //===========//
@@ -107,7 +104,7 @@ public:
     }
 
     // хеш-функцию нельзя изменять: нарушиться кучу свойств
-    // поэтому передается по const ссылке
+    // поэтому передается по const&
     const H &hash_function() const {
         return m_hasher;
     }
@@ -116,19 +113,21 @@ public:
     //==INSERT/ERASE==//
     //================//
 
-    // ЕСЛИ НЕ БЫЛО элемента с ключом key, то добавляет key->value
-    void insert(const K &key, V value) {
-        // нашли либо пустую ячейку, либо корзину с этим же ключом
+    template <typename Key, typename Value>
+    void insert(Key &&key, Value &&value) {
         std::size_t index = find_index(key);
         if (!m_buckets[index]) {
             m_size++;
-            m_buckets[index] = std::make_pair(key, std::move(value));
+            m_buckets[index] = std::make_pair(
+                std::forward<Key>(key), std::forward<Value>(value)
+            );
             update_capacity();
         }
     }
 
-    void insert(const Item &item) {
-        insert(item.first, item.second);
+    template <typename Item = std::pair<K, V>>
+    void insert(Item &&item) {
+        insert(std::forward<Item>(item).first, std::forward<Item>(item).second);
     }
 
     // вернет правду, если мы удалили
@@ -189,6 +188,20 @@ public:
         return m_buckets[index]->second;
     }
 
+    /*template <typename Key>
+    V &operator[](Key &&key) {
+        std::size_t index = find_index(key);
+        if (!m_buckets[index]) {
+            // FATAL
+            // тут я сделаю move key
+            insert(std::forward<Key>(key), V());
+            // тут попробую найти этот ключ, но он совсем другой, потому что я
+            // сделал move
+            index = find_index(key);
+        }
+        return m_buckets[index]->second;
+    }*/
+
     //============//
     //==ITERATOR==//
     //============//
@@ -233,7 +246,7 @@ public:
         }
 
         bool operator!=(const iterator &rhs) const {
-            return index != rhs.index && m_buckets_ptr == rhs.m_buckets_ptr;
+            return !(*this == rhs);
         }
     };
 
