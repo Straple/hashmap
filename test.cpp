@@ -1,7 +1,7 @@
-#include <hashmap.h>
 #include <algorithm>
 #include <catch.hpp>
 #include <chrono>
+#include <hashmap.hpp>
 #include <iostream>
 #include <list>
 #include <map>

@@ -1,6 +1,6 @@
 #include <iostream>
 #include <string>
-#include "hashmap.h"
+#include "hashmap.hpp"
 
 struct visor_t {
     std::string str;
