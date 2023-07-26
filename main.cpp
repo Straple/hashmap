@@ -1,5 +1,6 @@
 #include <iostream>
 #include <string>
+#include <unordered_map>
 #include "hashmap.hpp"
 
 struct visor_t {
@@ -61,9 +62,39 @@ struct visor_hasher {
     }
 };
 
+void verify_insert_and_result() {
+    /*
+    hello 5 1
+    lol 228 1
+    lol 228 0
+    */
+    // std::unordered_map
+    hashmap<std::string, int> mp;
+    {
+        auto [iter, is_ins] = mp.insert({"hello", 5});
+        std::cout << iter->first << ' ' << iter->second << ' ' << is_ins
+                  << '\n';
+    }
+    {
+        auto [iter, is_ins] = mp.insert({"lol", 228});
+        std::cout << iter->first << ' ' << iter->second << ' ' << is_ins
+                  << '\n';
+    }
+    {
+        auto [iter, is_ins] = mp.insert({"lol", -1});
+        std::cout << iter->first << ' ' << iter->second << ' ' << is_ins
+                  << '\n';
+    }
+    {
+        //auto iter = mp.erase("lol");
+        //std::cout << iter->first << ' ' << iter->second << ' ' << '\n';
+    }
+}
+
 int main() {
-    hashmap<visor_t, int, visor_hasher> map;
+    /*hashmap<visor_t, int, visor_hasher> map;
     map["hello"] = 10;
     map["world"] = 5;
-    map.clear();
+    map.clear();*/
+    verify_insert_and_result();
 }

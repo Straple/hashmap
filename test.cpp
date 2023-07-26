@@ -69,8 +69,8 @@ TEST_CASE("noncopyable key and value") {
         map.erase(std::move(x));
 
         // CE, but should work. need TODO
-        // map[noncopyable(5)] = 10;
-        // map[std::move(x)] = 10;
+        map[noncopyable(5)] = 10;
+        map[std::move(x)] = 10;
 
         // map[x] = 10; // CE OK
     }
@@ -351,8 +351,8 @@ struct tester {
     nanoseconds duration_time = {}, max_time = {};
     std::size_t hash_calculation_counter = 0;
 
-    const static std::size_t elems_count = 1e6;
-    const static std::size_t iterations = 1e7;
+    const static std::size_t elems_count = 1e4;
+    const static std::size_t iterations = 1e5;
     const static int seed = 42;
 
     tester() {

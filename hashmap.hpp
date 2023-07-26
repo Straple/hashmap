@@ -109,25 +109,97 @@ public:
         return m_hasher;
     }
 
+    //============//
+    //==ITERATOR==//
+    //============//
+
+    friend class iterator;
+
+    class iterator {
+        std::size_t index = -1;
+        const std::vector<Bucket> *m_buckets_ptr = nullptr;
+
+    public:
+        iterator() = default;
+
+        iterator(std::size_t index, const std::vector<Bucket> &buckets)
+            : index(index), m_buckets_ptr(&buckets) {
+        }
+
+        iterator &operator++() {
+            index++;
+            for (; index < m_buckets_ptr->size() && !(*m_buckets_ptr)[index];
+                 index++) {
+            }
+            return *this;
+        }
+
+        iterator operator++(int) {
+            iterator save_it = *this;
+            ++(*this);
+            return save_it;
+        }
+
+        const Item *operator->() {
+            return &*(*m_buckets_ptr)[index];
+        }
+
+        const Item &operator*() {
+            return *(*m_buckets_ptr)[index];
+        }
+
+        bool operator==(const iterator &rhs) const {
+            return index == rhs.index && m_buckets_ptr == rhs.m_buckets_ptr;
+        }
+
+        bool operator!=(const iterator &rhs) const {
+            return !(*this == rhs);
+        }
+    };
+
+    iterator begin() const {
+        iterator it(-1, m_buckets);
+        ++it;  // продвигаем до первого элемента
+        return it;
+    }
+
+    iterator end() const {
+        return iterator(m_buckets.size(), m_buckets);
+    }
+
     //================//
     //==INSERT/ERASE==//
     //================//
 
+private:
     template <typename Key, typename Value>
-    void insert(Key &&key, Value &&value) {
+    std::pair<std::size_t, bool> insert_impl(Key &&key, Value &&value) {
+        update_capacity();
+
         std::size_t index = find_index(key);
-        if (!m_buckets[index]) {
+        bool need_insert = !m_buckets[index];
+        if (need_insert) {
             m_size++;
             m_buckets[index] = std::make_pair(
                 std::forward<Key>(key), std::forward<Value>(value)
             );
-            update_capacity();
         }
+        return std::make_pair(index, need_insert);
+    }
+
+public:
+    template <typename Key, typename Value>
+    std::pair<iterator, bool> insert(Key &&key, Value &&value) {
+        auto [index, was_inserted] =
+            insert_impl(std::forward<Key>(key), std::forward<Value>(value));
+        return std::make_pair(iterator(index, m_buckets), was_inserted);
     }
 
     template <typename Item = std::pair<K, V>>
-    void insert(Item &&item) {
-        insert(std::forward<Item>(item).first, std::forward<Item>(item).second);
+    std::pair<iterator, bool> insert(Item &&item) {
+        return insert(
+            std::forward<Item>(item).first, std::forward<Item>(item).second
+        );
     }
 
     // вернет правду, если мы удалили
@@ -179,76 +251,14 @@ public:
         m_size = 0;
     }
 
-    V &operator[](const K &key) {
-        std::size_t index = find_index(key);
-        if (!m_buckets[index]) {
-            insert(key, V());
-            index = find_index(key);
-        }
-        return m_buckets[index]->second;
-    }
-
-    /*template <typename Key>
+    template <typename Key>
     V &operator[](Key &&key) {
         std::size_t index = find_index(key);
         if (!m_buckets[index]) {
-            // FATAL
-            // тут я сделаю move key
-            insert(std::forward<Key>(key), V());
-            // тут попробую найти этот ключ, но он совсем другой, потому что я
-            // сделал move
-            index = find_index(key);
+            index = insert_impl(std::forward<Key>(key), V()).first;
         }
         return m_buckets[index]->second;
-    }*/
-
-    //============//
-    //==ITERATOR==//
-    //============//
-
-    friend class iterator;
-
-    class iterator {
-        std::size_t index = -1;
-        const std::vector<Bucket> *m_buckets_ptr = nullptr;
-
-    public:
-        iterator() = default;
-
-        iterator(std::size_t index, const std::vector<Bucket> &buckets)
-            : index(index), m_buckets_ptr(&buckets) {
-        }
-
-        iterator &operator++() {
-            index++;
-            for (; index < m_buckets_ptr->size() && !(*m_buckets_ptr)[index];
-                 index++) {
-            }
-            return *this;
-        }
-
-        iterator operator++(int) {
-            iterator save_it = *this;
-            ++(*this);
-            return save_it;
-        }
-
-        const Item *operator->() {
-            return &*(*m_buckets_ptr)[index];
-        }
-
-        const Item &operator*() {
-            return *(*m_buckets_ptr)[index];
-        }
-
-        bool operator==(const iterator &rhs) const {
-            return index == rhs.index && m_buckets_ptr == rhs.m_buckets_ptr;
-        }
-
-        bool operator!=(const iterator &rhs) const {
-            return !(*this == rhs);
-        }
-    };
+    }
 
     // вернет индекс корзины, в которой лежит элемент с таким ключом
     // или -1, если такого элемента нет
@@ -268,15 +278,5 @@ public:
         } else {
             return iterator(index, m_buckets);
         }
-    }
-
-    iterator begin() const {
-        iterator it(-1, m_buckets);
-        ++it;  // продвигаем до первого элемента
-        return it;
-    }
-
-    iterator end() const {
-        return iterator(m_buckets.size(), m_buckets);
     }
 };
