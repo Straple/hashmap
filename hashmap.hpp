@@ -91,6 +91,43 @@ public:
         : hashmap(l.begin(), l.end(), hasher) {
     }
 
+    hashmap(hashmap &&other) noexcept
+        : m_size(std::exchange(other.m_size, 0)),
+          m_buckets(std::move(other.m_buckets)),
+          m_hasher(std::move(other.m_hasher)) {
+        other.m_buckets.resize(8);
+    }
+
+    hashmap(const hashmap &other) : hashmap(other.size(), other.m_hasher) {
+        for (auto it : other) {
+            insert(it);
+        }
+    }
+
+    hashmap &operator=(const hashmap &other) {
+        if (this != &other) {
+            clear();
+            for (auto it : other) {
+                insert(it);
+            }
+        }
+        return *this;
+    }
+
+    hashmap &operator=(hashmap &&other) {
+        if (this != &other) {
+            clear();
+            m_size = std::exchange(other.m_size, 0);
+            m_buckets = std::move(other.m_buckets);
+            m_hasher = std::move(other.m_hasher);
+
+            other.m_buckets.resize(8);
+        } else {
+            clear();
+        }
+        return *this;
+    }
+
     //===========//
     //==GETTERS==//
     //===========//
@@ -120,6 +157,14 @@ public:
         const std::vector<Bucket> *m_buckets_ptr = nullptr;
 
     public:
+
+        using value_type = Item;
+        using reference = Item&;
+        using pointer = Item*;
+
+        using iterator_category = std::forward_iterator_tag;
+        using difference_type = std::ptrdiff_t;
+
         iterator() = default;
 
         iterator(std::size_t index, const std::vector<Bucket> &buckets)
@@ -277,6 +322,14 @@ public:
             return end();
         } else {
             return iterator(index, m_buckets);
+        }
+    }
+
+    friend bool operator==(const hashmap &lhs, const hashmap &rhs) {
+        if (lhs.size() != rhs.size()) {
+            return false;
+        } else {
+            return std::is_permutation(lhs.begin(), lhs.end(), rhs.begin());
         }
     }
 };
