@@ -114,7 +114,7 @@ public:
         return *this;
     }
 
-    hashmap &operator=(hashmap &&other) {
+    hashmap &operator=(hashmap &&other) noexcept {
         if (this != &other) {
             clear();
             m_size = std::exchange(other.m_size, 0);

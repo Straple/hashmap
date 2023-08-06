@@ -1,40 +1,38 @@
 #include <iostream>
 #include "test_utils.hpp"
 
-// all assignments
-// object can be:
+// состояния объекта:
 // 0) default empty (после конструктора по умолчанию)
-// 1-2) non empty (в нем есть некоторые элементы). 1 означает только 1 элемент,
-// 2 - много элементов
-// 2) cleared (после .clear())
-// 3) moved from (из него
-// замували)
+// 1) empty, удалили все элементы, например .clear()
+// 2) no empty
+// 3) moved from (из него замували)
 
-TEST_CASE() {
-    for (int i = 0; i < 4; i++) {
-        for (int j = 0; j < 4; j++) {
-            map_t a;
-            if (i == 0) {
-            }
-        }
+map_t build_map() {
+    map_t map;
+    for (int i = 0; i < 1000; i++) {
+        map[i] = -1;
     }
+    return map;
 }
 
-TEST_CASE("default empty = default empty") {
-    map_t a, b;
+TEST_CASE("copy from default empty") {
+    map_t a = build_map();
+    map_t b;
+
     SECTION("copy assign") {
-        b = a;
+        a = b;
     }
     SECTION("move assign") {
-        b = std::move(a);
+        a = std::move(b);
     }
     REQUIRE(a == b);
     REQUIRE(a.empty());
     REQUIRE(b.empty());
 }
 
-TEST_CASE("default empty = non empty") {
-    map_t a, b;
+TEST_CASE("copy from non empty") {
+    map_t a = build_map();
+    map_t b;
     SECTION("b is non empty, small") {
         b[1] = 2;
     }
@@ -46,10 +44,13 @@ TEST_CASE("default empty = non empty") {
 
     a = b;
     REQUIRE(a == b);
+    REQUIRE(!a.empty());
+    REQUIRE(!b.empty());
 }
 
-TEST_CASE("default empty = cleared") {
-    map_t a, b;
+TEST_CASE("copy from cleared") {
+    map_t a = build_map();
+    map_t b;
     SECTION("b is default empty") {
     }
     SECTION("b is non empty, small") {
@@ -68,8 +69,10 @@ TEST_CASE("default empty = cleared") {
     REQUIRE(b.empty());
 }
 
-TEST_CASE("default empty = moved from") {
-    map_t a, b;
+TEST_CASE("copy from moved from") {
+    map_t a = build_map();
+    map_t b;
+
     SECTION("b is default empty") {
     }
     SECTION("b is non empty, small") {
@@ -113,39 +116,70 @@ TEST_CASE("changing a does not change b") {
     REQUIRE(b.find(123)->second == -1);
 }
 
-TEST_CASE("copy assign") {
+TEST_CASE("some combinations") {
     map_t a, b;
-    SECTION("small") {
-        b[123] = 228;
-    }
-    SECTION("big") {
-        for (int i = 0; i < 1000; i++) {
-            b[i] = -1;
-        }
-    }
-    b = a;
+    a[1] = 2;
+    b[3] = 4;
+    a = b;
 
-    REQUIRE(a.size() == 0);
-    REQUIRE(b.size() == 0);
+    REQUIRE(a.size() == 1);
+    REQUIRE(b.size() == 1);
+
+    REQUIRE(b.find(3)->second == 4);
+    REQUIRE(a.find(1) == a.end());
+
+    a[1] = 2;
+    REQUIRE(a.size() == 2);
+    REQUIRE(b.size() == 1);
+    REQUIRE(b.find(1) == b.end());
+    REQUIRE(a.find(1)->second == 2);
 }
 
-TEST_CASE("assignment combinations 5") {
-    map_t a, b;
-    SECTION("small") {
-        b[123] = 228;
-    }
-    SECTION("big") {
-        for (int i = 0; i < 1000; i++) {
-            b[i] = -1;
-        }
-    }
+TEST_CASE("self assigment") {
+    map_t a;
+    a[1] = 2;
+    a = a;
+    REQUIRE(a == a);
+    REQUIRE(a.size() == 1);
+    REQUIRE(a.find(1)->second == 2);
 
+    a = std::move(a);
+    REQUIRE(a == a);
+    REQUIRE(a.empty());
+    REQUIRE(a.find(1) == a.end());
+}
+
+// TODO: может это убрать в другое место?
+TEST_CASE("compare == and !=") {
+    map_t a, b;
+
+    auto verify = [&](bool is_eq) {
+        REQUIRE((a == b) == is_eq);
+        REQUIRE((b == a) == is_eq);
+        REQUIRE((!(a != b)) == is_eq);
+        REQUIRE((!(b != a)) == is_eq);
+    };
+
+    a[1] = 2;
+    verify(false);
+    b[2] = 1;
+    verify(false);
+    a[2] = 1;
+    verify(false);
+    b[1] = 2;
+    verify(true);
+    a.clear();
+    verify(false);
     b.clear();
-    b = a;
+    verify(true);
 
-    REQUIRE(a.size() == 0);
-    REQUIRE(b.size() == 0);
-}
-
-TEST_CASE("assignment combinations 6") {
+    for (int i = 0; i < 1000; i++) {
+        a[i] = -1;
+        verify(false);
+    }
+    for (int i = 999; i >= 0; i--) {
+        verify(false);
+        b[i] = -1;
+    }
+    verify(true);
 }
