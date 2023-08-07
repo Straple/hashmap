@@ -157,10 +157,9 @@ public:
         const std::vector<Bucket> *m_buckets_ptr = nullptr;
 
     public:
-
         using value_type = Item;
-        using reference = Item&;
-        using pointer = Item*;
+        using reference = Item &;
+        using pointer = Item *;
 
         using iterator_category = std::forward_iterator_tag;
         using difference_type = std::ptrdiff_t;
@@ -323,6 +322,14 @@ public:
         } else {
             return iterator(index, m_buckets);
         }
+    }
+
+    bool contains(const K &key) const {
+        return bucket(key) != -1;
+    }
+
+    std::size_t count(const K &key) const {
+        return contains(key);
     }
 
     friend bool operator==(const hashmap &lhs, const hashmap &rhs) {
