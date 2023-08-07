@@ -28,6 +28,7 @@ add_catch(test_unit
         tests/unit/assignment_combinations.cpp
         tests/unit/count.cpp
         tests/unit/contains.cpp
-        tests/unit/at.cpp)
+        tests/unit/at.cpp
+        tests/unit/empty.cpp)
 
 add_executable(main main.cpp)
