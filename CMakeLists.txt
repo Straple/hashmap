@@ -29,6 +29,7 @@ add_catch(test_unit
         tests/unit/count.cpp
         tests/unit/contains.cpp
         tests/unit/at.cpp
-        tests/unit/empty.cpp)
+        tests/unit/empty.cpp
+        tests/unit/insert.cpp)
 
 add_executable(main main.cpp)
