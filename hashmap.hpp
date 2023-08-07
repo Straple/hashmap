@@ -1,6 +1,7 @@
 #pragma once
 
 #include <optional>
+#include <stdexcept>
 #include <utility>
 #include <vector>
 
@@ -322,6 +323,24 @@ public:
         } else {
             return iterator(index, m_buckets);
         }
+    }
+
+private:
+    std::size_t at_index(const K &key) const {
+        long long index = bucket(key);
+        if (index == -1) {
+            throw std::out_of_range("failed hashmap::at(key)");
+        }
+        return index;
+    }
+
+public:
+    V &at(const K &key) {
+        return m_buckets[at_index(key)]->second;
+    }
+
+    const V &at(const K &key) const {
+        return m_buckets[at_index(key)]->second;
     }
 
     bool contains(const K &key) const {
