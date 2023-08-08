@@ -121,10 +121,7 @@ public:
             m_size = std::exchange(other.m_size, 0);
             m_buckets = std::move(other.m_buckets);
             m_hasher = std::move(other.m_hasher);
-
             other.m_buckets.resize(8);
-        } else {
-            clear();
         }
         return *this;
     }
@@ -147,7 +144,7 @@ public:
         return m_hasher;
     }
 
-    template <typename T = double>
+    template <typename T = float>
     T load_factor() const {
         return static_cast<T>(size()) / m_buckets.size();
     }
@@ -222,16 +219,13 @@ public:
     //================//
 
 private:
-    template <typename Key, typename Value>
-    std::pair<std::size_t, bool> insert_impl(Key &&key, Value &&value) {
+    std::pair<std::size_t, bool> insert_impl(K key, V value) {
         update_capacity();
         std::size_t index = find_index(key);
         bool need_insert = !m_buckets[index];
         if (need_insert) {
             m_size++;
-            m_buckets[index] = std::make_pair(
-                std::forward<Key>(key), std::forward<Value>(value)
-            );
+            m_buckets[index].emplace(std::move(key), std::move(value));
         }
         return std::make_pair(index, need_insert);
     }
@@ -239,8 +233,9 @@ private:
 public:
     template <typename Key, typename Value>
     std::pair<iterator, bool> insert(Key &&key, Value &&value) {
-        auto [index, was_inserted] =
-            insert_impl(std::forward<Key>(key), std::forward<Value>(value));
+        auto [index, was_inserted] = insert_impl(
+            K(std::forward<Key>(key)), V(std::forward<Value>(value))
+        );
         return std::make_pair(iterator(index, m_buckets), was_inserted);
     }
 
@@ -302,9 +297,10 @@ public:
 
     template <typename Key>
     V &operator[](Key &&key) {
-        std::size_t index = find_index(key);
+        K key_convert(std::forward<Key>(key));
+        std::size_t index = find_index(key_convert);
         if (!m_buckets[index]) {
-            index = insert_impl(std::forward<Key>(key), V()).first;
+            index = insert_impl(std::move(key_convert), V()).first;
         }
         return m_buckets[index]->second;
     }

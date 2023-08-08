@@ -1,13 +1,13 @@
 #include <algorithm>
-#include <catch.hpp>
 #include <chrono>
-#include <hashmap.hpp>
 #include <iostream>
 #include <list>
 #include <map>
 #include <unordered_map>
 #include <utility>
 #include <vector>
+#include "contrib/catch/catch.hpp"
+#include "hashmap.hpp"
 
 using namespace std::chrono;
 

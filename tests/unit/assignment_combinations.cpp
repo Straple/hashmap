@@ -145,8 +145,8 @@ TEST_CASE("self assigment") {
 
     a = std::move(a);
     REQUIRE(a == a);
-    REQUIRE(a.empty());
-    REQUIRE(a.find(1) == a.end());
+    REQUIRE(a.size() == 1);
+    REQUIRE(a.find(1)->second == 2);
 }
 
 // TODO: может это убрать в другое место?

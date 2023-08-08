@@ -22,7 +22,7 @@ if (NOT DEFINED PNG_FOUND)
     message(FATAL_ERROR "Can't find libpng")
 endif()
 
-add_catch(test_hashmap test.cpp)
+add_catch(test_hashmap tests/benchmark/test.cpp)
 add_catch(test_unit
         tests/unit/assign_to_move.cpp
         tests/unit/assignment_combinations.cpp
@@ -32,6 +32,7 @@ add_catch(test_unit
         tests/unit/empty.cpp
         tests/unit/insert_and_erase.cpp
         tests/unit/diamond.cpp
-        tests/unit/load_factor.cpp)
+        tests/unit/load_factor.cpp
+        tests/unit/unique_ptr.cpp)
 
 add_executable(main main.cpp)
