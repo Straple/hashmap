@@ -30,6 +30,8 @@ add_catch(test_unit
         tests/unit/contains.cpp
         tests/unit/at.cpp
         tests/unit/empty.cpp
-        tests/unit/insert.cpp)
+        tests/unit/insert_and_erase.cpp
+        tests/unit/diamond.cpp
+        tests/unit/load_factor.cpp)
 
 add_executable(main main.cpp)

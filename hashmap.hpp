@@ -52,7 +52,7 @@ class hashmap {
     // при необходимости расширяет корзину, чтобы поддерживать быстрый доступ к
     // элементам
     void update_capacity() {
-        if (m_size * 2 <= m_buckets.size()) {
+        if (1 + m_size * 2 <= m_buckets.size()) {
             return;
         }
         auto old_buckets = std::move(m_buckets);
@@ -147,6 +147,11 @@ public:
         return m_hasher;
     }
 
+    template <typename T = double>
+    T load_factor() const {
+        return static_cast<T>(size()) / m_buckets.size();
+    }
+
     //============//
     //==ITERATOR==//
     //============//
@@ -220,7 +225,6 @@ private:
     template <typename Key, typename Value>
     std::pair<std::size_t, bool> insert_impl(Key &&key, Value &&value) {
         update_capacity();
-
         std::size_t index = find_index(key);
         bool need_insert = !m_buckets[index];
         if (need_insert) {
