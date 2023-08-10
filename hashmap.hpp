@@ -108,8 +108,8 @@ public:
     hashmap &operator=(const hashmap &other) {
         if (this != &other) {
             clear();
-            for (auto it : other) {
-                insert(it);
+            for (auto value : other) {
+                insert(value);
             }
         }
         return *this;
@@ -219,19 +219,35 @@ public:
     //================//
 
 private:
-    std::pair<std::size_t, bool> insert_impl(K key, V value) {
+    std::pair<std::size_t, bool> insert_item(Item item) {
         update_capacity();
-        std::size_t index = find_index(key);
+        std::size_t index = find_index(item.first);
         bool need_insert = !m_buckets[index];
         if (need_insert) {
             m_size++;
-            m_buckets[index].emplace(std::move(key), std::move(value));
+            m_buckets[index].emplace(
+                std::move(item.first), std::move(item.second)
+            );
         }
         return std::make_pair(index, need_insert);
     }
 
 public:
-    template <typename Key, typename Value>
+    template <class... Args>
+    std::pair<iterator, bool> emplace(Args &&...args) {
+        auto [index, was_inserted] =
+            insert_item(Item(std::forward<Args>(args)...));
+        return std::make_pair(iterator(index, m_buckets), was_inserted);
+    }
+
+    template <typename Item = std::pair<K, V>>
+    std::pair<iterator, bool> insert(Item &&item) {
+        return emplace(
+            std::forward<Item>(item).first, std::forward<Item>(item).second
+        );
+    }
+
+    /*template <typename Key, typename Value>
     std::pair<iterator, bool> insert(Key &&key, Value &&value) {
         auto [index, was_inserted] = insert_impl(
             K(std::forward<Key>(key)), V(std::forward<Value>(value))
@@ -244,7 +260,7 @@ public:
         return insert(
             std::forward<Item>(item).first, std::forward<Item>(item).second
         );
-    }
+    }*/
 
     // вернет правду, если мы удалили
     bool erase(const K &key) {
@@ -300,7 +316,7 @@ public:
         K key_convert(std::forward<Key>(key));
         std::size_t index = find_index(key_convert);
         if (!m_buckets[index]) {
-            index = insert_impl(std::move(key_convert), V()).first;
+            index = insert_item(Item(std::move(key_convert), V())).first;
         }
         return m_buckets[index]->second;
     }

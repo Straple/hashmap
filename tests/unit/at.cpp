@@ -1,11 +1,11 @@
 #include "test_utils.hpp"
 
 TEST_CASE("at") {
-    map_t a;
+    map_t<> a;
 
     REQUIRE_THROWS_AS(a.at(0), std::out_of_range);
 
-    const map_t &c = a;
+    const map_t<> &c = a;
 
     REQUIRE_THROWS_AS(c.at(0), std::out_of_range);
 

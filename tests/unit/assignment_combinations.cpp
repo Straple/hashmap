@@ -7,8 +7,8 @@
 // 2) no empty
 // 3) moved from (из него замували)
 
-map_t build_map() {
-    map_t map;
+map_t<> build_map() {
+    map_t<> map;
     for (int i = 0; i < 1000; i++) {
         map[i] = -1;
     }
@@ -16,8 +16,8 @@ map_t build_map() {
 }
 
 TEST_CASE("copy from default empty") {
-    map_t a = build_map();
-    map_t b;
+    map_t<> a = build_map();
+    map_t<> b;
 
     SECTION("copy assign") {
         a = b;
@@ -31,8 +31,8 @@ TEST_CASE("copy from default empty") {
 }
 
 TEST_CASE("copy from non empty") {
-    map_t a = build_map();
-    map_t b;
+    map_t<> a = build_map();
+    map_t<> b;
     SECTION("b is non empty, small") {
         b[1] = 2;
     }
@@ -49,8 +49,8 @@ TEST_CASE("copy from non empty") {
 }
 
 TEST_CASE("copy from cleared") {
-    map_t a = build_map();
-    map_t b;
+    map_t<> a = build_map();
+    map_t<> b;
     SECTION("b is default empty") {
     }
     SECTION("b is non empty, small") {
@@ -70,8 +70,8 @@ TEST_CASE("copy from cleared") {
 }
 
 TEST_CASE("copy from moved from") {
-    map_t a = build_map();
-    map_t b;
+    map_t<> a = build_map();
+    map_t<> b;
 
     SECTION("b is default empty") {
     }
@@ -84,7 +84,7 @@ TEST_CASE("copy from moved from") {
         }
     }
 
-    map_t moved = std::move(b);
+    map_t<> moved = std::move(b);
     a = b;
     REQUIRE(a == b);
     REQUIRE(a.empty());
@@ -92,9 +92,9 @@ TEST_CASE("copy from moved from") {
 }
 
 TEST_CASE("changing a does not change b") {
-    map_t a;
-    const map_t &a_const = a;
-    map_t b;
+    map_t<> a;
+    const map_t<> &a_const = a;
+    map_t<> b;
 
     a[123] = 228;
     REQUIRE(a != b);
@@ -117,7 +117,7 @@ TEST_CASE("changing a does not change b") {
 }
 
 TEST_CASE("some combinations") {
-    map_t a, b;
+    map_t<> a, b;
     a[1] = 2;
     b[3] = 4;
     a = b;
@@ -136,7 +136,7 @@ TEST_CASE("some combinations") {
 }
 
 TEST_CASE("self assigment") {
-    map_t a;
+    map_t<> a;
     a[1] = 2;
     a = a;
     REQUIRE(a == a);
@@ -151,7 +151,7 @@ TEST_CASE("self assigment") {
 
 // TODO: может это убрать в другое место?
 TEST_CASE("compare == and !=") {
-    map_t a, b;
+    map_t<> a, b;
 
     auto verify = [&](bool is_eq) {
         REQUIRE((a == b) == is_eq);

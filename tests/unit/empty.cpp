@@ -1,7 +1,7 @@
 #include "test_utils.hpp"
 
 TEST_CASE("empty object") {
-    map_t a;
+    map_t<> a;
 
     REQUIRE(a.find(0) == a.end());
     REQUIRE(a.begin() == a.end());

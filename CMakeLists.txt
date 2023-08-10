@@ -23,16 +23,26 @@ if (NOT DEFINED PNG_FOUND)
 endif()
 
 add_catch(test_hashmap tests/benchmark/test.cpp)
+
 add_catch(test_unit
+        tests/unit/insert.cpp
+        tests/unit/emplace.cpp
+        tests/unit/erase.cpp
+
         tests/unit/assign_to_move.cpp
         tests/unit/assignment_combinations.cpp
+
+        tests/unit/load_factor.cpp
+
         tests/unit/count.cpp
         tests/unit/contains.cpp
         tests/unit/at.cpp
-        tests/unit/empty.cpp
-        tests/unit/insert_and_erase.cpp
+
         tests/unit/diamond.cpp
-        tests/unit/load_factor.cpp
-        tests/unit/unique_ptr.cpp)
+
+        tests/unit/unique_ptr.cpp
+
+        tests/unit/empty.cpp
+        )
 
 add_executable(main main.cpp)
