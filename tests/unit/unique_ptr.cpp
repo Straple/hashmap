@@ -62,8 +62,8 @@ TEST_CASE("key is unique_ptr") {
     map_t<std::unique_ptr<int>, int> m;
     m.emplace(new int(10), 0);
     m.emplace(new int(20), 0);
-    // m[new int(30)] = 0;
-    // std::unique_ptr<int> p(new int(40));
-    // m.emplace(std::move(p), 0);
-    // m[std::move(p)] = 0;
+    // m[new int(30)] = 0; !!!OK CE!!!
+    std::unique_ptr<int> p(new int(40));
+    m.emplace(std::move(p), 0);
+    m[std::move(p)] = 0;
 }

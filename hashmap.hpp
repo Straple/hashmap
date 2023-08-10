@@ -214,9 +214,9 @@ public:
         return iterator(m_buckets.size(), m_buckets);
     }
 
-    //================//
-    //==INSERT/ERASE==//
-    //================//
+    //=============//
+    //==MODIFIERS==//
+    //=============//
 
 private:
     std::pair<std::size_t, bool> insert_item(Item item) {
@@ -233,34 +233,22 @@ private:
     }
 
 public:
+    template <typename Item = std::pair<K, V>>
+    std::pair<iterator, bool> insert(Item &&item) {
+        auto [index, was_inserted] = insert_item(std::forward<Item>(item));
+        return std::make_pair(iterator(index, m_buckets), was_inserted);
+    }
+
+    void insert(std::initializer_list<Item> item_list) {
+        for (auto &item : item_list) {
+            insert(std::move(item));
+        }
+    }
+
     template <class... Args>
     std::pair<iterator, bool> emplace(Args &&...args) {
-        auto [index, was_inserted] =
-            insert_item(Item(std::forward<Args>(args)...));
-        return std::make_pair(iterator(index, m_buckets), was_inserted);
+        return insert(Item(std::forward<Args>(args)...));
     }
-
-    template <typename Item = std::pair<K, V>>
-    std::pair<iterator, bool> insert(Item &&item) {
-        return emplace(
-            std::forward<Item>(item).first, std::forward<Item>(item).second
-        );
-    }
-
-    /*template <typename Key, typename Value>
-    std::pair<iterator, bool> insert(Key &&key, Value &&value) {
-        auto [index, was_inserted] = insert_impl(
-            K(std::forward<Key>(key)), V(std::forward<Value>(value))
-        );
-        return std::make_pair(iterator(index, m_buckets), was_inserted);
-    }
-
-    template <typename Item = std::pair<K, V>>
-    std::pair<iterator, bool> insert(Item &&item) {
-        return insert(
-            std::forward<Item>(item).first, std::forward<Item>(item).second
-        );
-    }*/
 
     // вернет правду, если мы удалили
     bool erase(const K &key) {
@@ -311,12 +299,18 @@ public:
         m_size = 0;
     }
 
-    template <typename Key>
-    V &operator[](Key &&key) {
-        K key_convert(std::forward<Key>(key));
-        std::size_t index = find_index(key_convert);
+    V &operator[](const K &key) {
+        std::size_t index = find_index(key);
         if (!m_buckets[index]) {
-            index = insert_item(Item(std::move(key_convert), V())).first;
+            index = insert_item(Item(key, V())).first;
+        }
+        return m_buckets[index]->second;
+    }
+
+    V &operator[](K &&key) {
+        std::size_t index = find_index(key);
+        if (!m_buckets[index]) {
+            index = insert_item(Item(std::move(key), V())).first;
         }
         return m_buckets[index]->second;
     }
