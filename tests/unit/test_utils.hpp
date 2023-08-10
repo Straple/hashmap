@@ -7,5 +7,5 @@
 #include <string>
 #include <unordered_map>
 
-template<typename K = int, typename V = int, typename H = std::hash<K>>
+template <typename K = int, typename V = int, typename H = std::hash<K>>
 using map_t = hashmap<K, V, H>;

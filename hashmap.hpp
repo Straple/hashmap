@@ -68,6 +68,27 @@ class hashmap {
     }
 
 public:
+    //============//
+    //==TYPEDEFS==//
+    //============//
+
+    using key_type = K;
+    using mapped_type = V;
+    using value_type = std::pair<K, V>;
+    using hasher = H;
+
+    using pointer = value_type *;
+    using const_pointer = const value_type *;
+
+    using reference = value_type &;
+    using const_reference = const value_type &;
+
+    using size_type = std::size_t;
+    using difference_type = long long;
+
+    friend class iterator;
+    friend class const_iterator;
+
     //================//
     //==CONSTRUCTORS==//
     //================//
@@ -153,30 +174,25 @@ public:
     //==ITERATOR==//
     //============//
 
-    friend class iterator;
-
     class iterator {
         std::size_t index = -1;
-        const std::vector<Bucket> *m_buckets_ptr = nullptr;
+        std::vector<Bucket> &m_buckets;
 
     public:
-        using value_type = Item;
-        using reference = Item &;
-        using pointer = Item *;
-
-        using iterator_category = std::forward_iterator_tag;
         using difference_type = std::ptrdiff_t;
+        using value_type = hashmap::value_type;
+        using pointer = hashmap::pointer;
+        using reference = hashmap::reference;
+        using iterator_category = std::forward_iterator_tag;
 
-        iterator() = default;
-
-        iterator(std::size_t index, const std::vector<Bucket> &buckets)
-            : index(index), m_buckets_ptr(&buckets) {
+        iterator(std::size_t index, std::vector<Bucket> &buckets)
+            : index(index), m_buckets(buckets) {
         }
 
         iterator &operator++() {
             index++;
-            for (; index < m_buckets_ptr->size() && !(*m_buckets_ptr)[index];
-                 index++) {
+            while (index < m_buckets.size() && !m_buckets[index]) {
+                index++;
             }
             return *this;
         }
@@ -187,31 +203,97 @@ public:
             return save_it;
         }
 
-        const Item *operator->() {
-            return &*(*m_buckets_ptr)[index];
+        pointer operator->() {
+            return &*(m_buckets)[index];
         }
 
-        const Item &operator*() {
-            return *(*m_buckets_ptr)[index];
+        reference operator*() {
+            return *(m_buckets)[index];
         }
 
-        bool operator==(const iterator &rhs) const {
-            return index == rhs.index && m_buckets_ptr == rhs.m_buckets_ptr;
+        friend bool operator==(const iterator &lhs, const iterator &rhs) {
+            return lhs.index == rhs.index && lhs.m_buckets == rhs.m_buckets;
         }
 
-        bool operator!=(const iterator &rhs) const {
-            return !(*this == rhs);
+        friend bool operator!=(const iterator &lhs, const iterator &rhs) {
+            return !(lhs == rhs);
         }
     };
 
-    iterator begin() const {
+    class const_iterator {
+        std::size_t index = -1;
+        const std::vector<Bucket> &m_buckets = nullptr;
+
+    public:
+        using difference_type = std::ptrdiff_t;
+        using value_type = hashmap::value_type;
+        using pointer = hashmap::const_pointer;
+        using reference = hashmap::const_reference;
+        using iterator_category = std::forward_iterator_tag;
+
+        const_iterator(std::size_t index, const std::vector<Bucket> &buckets)
+            : index(index), m_buckets(buckets) {
+        }
+
+        const_iterator &operator++() {
+            index++;
+            while (index < m_buckets.size() && !m_buckets[index]) {
+                index++;
+            }
+            return *this;
+        }
+
+        const_iterator operator++(int) {
+            const_iterator save_it = *this;
+            ++(*this);
+            return save_it;
+        }
+
+        pointer operator->() const {
+            return &*(m_buckets)[index];
+        }
+
+        reference operator*() const {
+            return *(m_buckets)[index];
+        }
+
+        friend bool
+        operator==(const const_iterator &lhs, const const_iterator &rhs) {
+            return lhs.index == rhs.index && lhs.m_buckets == rhs.m_buckets;
+        }
+
+        friend bool
+        operator!=(const const_iterator &lhs, const const_iterator &rhs) {
+            return !(lhs == rhs);
+        }
+    };
+
+    iterator begin() {
         iterator it(-1, m_buckets);
         ++it;  // продвигаем до первого элемента
         return it;
     }
 
-    iterator end() const {
+    const_iterator begin() const {
+        return cbegin();
+    }
+
+    const_iterator cbegin() const {
+        const_iterator it(-1, m_buckets);
+        ++it;  // продвигаем до первого элемента
+        return it;
+    }
+
+    iterator end() {
         return iterator(m_buckets.size(), m_buckets);
+    }
+
+    const_iterator end() const {
+        return cend();
+    }
+
+    const_iterator cend() const {
+        return const_iterator(m_buckets.size(), m_buckets);
     }
 
     //=============//
@@ -326,12 +408,21 @@ public:
         }
     }
 
-    iterator find(const K &key) const {
+    iterator find(const K &key) {
         long long index = bucket(key);
         if (index == -1) {
             return end();
         } else {
             return iterator(index, m_buckets);
+        }
+    }
+
+    const_iterator find(const K &key) const {
+        long long index = bucket(key);
+        if (index == -1) {
+            return end();
+        } else {
+            return const_iterator(index, m_buckets);
         }
     }
 
