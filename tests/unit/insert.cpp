@@ -76,8 +76,7 @@ TEST_CASE("insert-counter"){
     }
 
     SECTION("insert 2"){
-        // 1 move ctor чтобы переместить counter::object в std::pair
-        // 1 move ctor, чтобы собрать итоговый объект внутри структуры
+        // аналогично "insert 1"
         m.insert({counter::object(1, counts), 10});
 
         REQUIRE(
