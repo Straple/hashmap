@@ -1,7 +1,7 @@
 #include <iostream>
 #include <string>
 #include <unordered_map>
-#include "hashmap.hpp"
+#include "../hashmap.hpp"
 
 struct visor_t {
     std::string str;

@@ -11,9 +11,6 @@
 
 using namespace std::chrono;
 
-template <typename K, typename V>
-using map_t = hashmap<K, V>;
-
 // returns (mean time, max time)
 template <class Map>
 std::pair<nanoseconds, nanoseconds> RunStress(

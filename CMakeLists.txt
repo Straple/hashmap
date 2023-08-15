@@ -11,18 +11,13 @@ set(GOOGLETEST_PATH "${CMAKE_SOURCE_DIR}/contrib/googletest" CACHE PATH "")
 
 find_package(Catch REQUIRED)
 
-add_subdirectory("${CMAKE_SOURCE_DIR}/contrib/benchmark")
+#add_subdirectory("${CMAKE_SOURCE_DIR}/contrib/benchmark")
 
 include(cmake/TestSolution.cmake)
 include(cmake/BuildFlags.cmake)
 
-find_package(PNG)
-
-if (NOT DEFINED PNG_FOUND)
-    message(FATAL_ERROR "Can't find libpng")
-endif ()
-
-add_catch(test_hashmap tests/benchmark/insert-erase.cpp)
+add_catch(benchmark_insert_erase tests/benchmark/insert&erase.cpp)
+add_catch(benchmark_gcd_machine tests/benchmark/gcd_machine.cpp)
 
 add_catch(test_unit
         tests/unit/ctors.cpp
@@ -60,4 +55,4 @@ add_catch(counter_unit_test
         tests/counter/test.cpp
         )
 
-add_executable(main main.cpp)
+add_executable(main tests/main.cpp)
