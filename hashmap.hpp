@@ -301,23 +301,37 @@ public:
     //=============//
 
 private:
-    std::pair<std::size_t, bool> insert_item(Item item) {
+    std::pair<std::size_t, bool> insert_item(Item &&item) {
         update_capacity();
         std::size_t index = find_index(item.first);
         bool need_insert = !m_buckets[index];
         if (need_insert) {
             m_size++;
-            m_buckets[index].emplace(
-                std::move(item.first), std::move(item.second)
-            );
+            m_buckets[index] = std::move(item);
+        }
+        return std::make_pair(index, need_insert);
+    }
+
+    std::pair<std::size_t, bool> insert_item(const Item &item) {
+        update_capacity();
+        std::size_t index = find_index(item.first);
+        bool need_insert = !m_buckets[index];
+        if (need_insert) {
+            m_size++;
+            m_buckets[index] = item;
         }
         return std::make_pair(index, need_insert);
     }
 
 public:
-    template <typename Item = std::pair<K, V>>
+
+    std::pair<iterator, bool> insert(const Item &item) {
+        auto [index, was_inserted] = insert_item(item);
+        return std::make_pair(iterator(index, m_buckets), was_inserted);
+    }
+
     std::pair<iterator, bool> insert(Item &&item) {
-        auto [index, was_inserted] = insert_item(std::forward<Item>(item));
+        auto [index, was_inserted] = insert_item(std::move(item));
         return std::make_pair(iterator(index, m_buckets), was_inserted);
     }
 

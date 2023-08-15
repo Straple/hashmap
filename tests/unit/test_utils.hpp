@@ -2,6 +2,8 @@
 
 #include "hashmap.hpp"
 //
+#include "../counter/counter.hpp"
+//
 #include <catch.hpp>
 #include <iostream>
 #include <string>
