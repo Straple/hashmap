@@ -45,6 +45,9 @@ add_catch(test_unit
         tests/unit/unique_ptr.cpp
 
         tests/unit/empty.cpp
+
+        tests/unit/noncopyable.cpp
+        tests/unit/std_string.cpp
         )
 
 add_catch(counter_unit_test
