@@ -176,7 +176,7 @@ public:
 
     class iterator {
         std::size_t index = -1;
-        std::vector<Bucket> &m_buckets;
+        std::vector<Bucket> *m_buckets;
 
     public:
         using difference_type = std::ptrdiff_t;
@@ -186,12 +186,12 @@ public:
         using iterator_category = std::forward_iterator_tag;
 
         iterator(std::size_t index, std::vector<Bucket> &buckets)
-            : index(index), m_buckets(buckets) {
+            : index(index), m_buckets(&buckets) {
         }
 
         iterator &operator++() {
             index++;
-            while (index < m_buckets.size() && !m_buckets[index]) {
+            while (index < m_buckets->size() && !(*m_buckets)[index]) {
                 index++;
             }
             return *this;
@@ -204,11 +204,11 @@ public:
         }
 
         pointer operator->() {
-            return &*(m_buckets)[index];
+            return &*(*m_buckets)[index];
         }
 
         reference operator*() {
-            return *(m_buckets)[index];
+            return *(*m_buckets)[index];
         }
 
         friend bool operator==(const iterator &lhs, const iterator &rhs) {
@@ -222,7 +222,7 @@ public:
 
     class const_iterator {
         std::size_t index = -1;
-        const std::vector<Bucket> &m_buckets = nullptr;
+        const std::vector<Bucket> *m_buckets = nullptr;
 
     public:
         using difference_type = std::ptrdiff_t;
@@ -232,12 +232,12 @@ public:
         using iterator_category = std::forward_iterator_tag;
 
         const_iterator(std::size_t index, const std::vector<Bucket> &buckets)
-            : index(index), m_buckets(buckets) {
+            : index(index), m_buckets(&buckets) {
         }
 
         const_iterator &operator++() {
             index++;
-            while (index < m_buckets.size() && !m_buckets[index]) {
+            while (index < m_buckets->size() && !(*m_buckets)[index]) {
                 index++;
             }
             return *this;
@@ -250,11 +250,11 @@ public:
         }
 
         pointer operator->() const {
-            return &*(m_buckets)[index];
+            return &*(*m_buckets)[index];
         }
 
         reference operator*() const {
-            return *(m_buckets)[index];
+            return *(*m_buckets)[index];
         }
 
         friend bool

@@ -63,3 +63,16 @@ TEST_CASE("std::string") {
         REQUIRE(map.begin() == map.end());
     }
 }
+
+TEST_CASE("std::string is value") {
+    map_t<int, std::string> my_map;
+    my_map[0] = "hello";
+    my_map[1] = "world";
+    my_map[2] = "!";
+    my_map[0 + 8] = "kek";
+    my_map.erase(0);
+
+    REQUIRE(my_map[0 + 8] == "kek");
+    REQUIRE(my_map.bucket(0 + 8) == 0);  // only for hashmap
+    REQUIRE(my_map.size() == 3);
+}

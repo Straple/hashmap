@@ -22,7 +22,7 @@ if (NOT DEFINED PNG_FOUND)
     message(FATAL_ERROR "Can't find libpng")
 endif ()
 
-add_catch(test_hashmap tests/benchmark/test.cpp)
+add_catch(test_hashmap tests/benchmark/insert-erase.cpp)
 
 add_catch(test_unit
         tests/unit/ctors.cpp
@@ -50,6 +50,10 @@ add_catch(test_unit
         tests/unit/std_string.cpp
 
         tests/unit/permute-stress.cpp
+
+        tests/unit/iterators.cpp
+
+        tests/unit/hasher.cpp
         )
 
 add_catch(counter_unit_test

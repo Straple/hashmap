@@ -1,5 +1,6 @@
 #include "../counter/counter.hpp"
 #include "test_utils.hpp"
+#include <list>
 
 // TODO: доделать
 
@@ -20,4 +21,14 @@ TEST_CASE("ctors") {
                             {"hash_calc", 0}}
                        )
     );
+}
+
+TEST_CASE("ctor from iterators begin, end"){
+    std::list<std::pair<int, int>> l{{3, 4}, {8, 5}, {4, 7}, {-1, -3}};
+    map_t<> map(l.begin(), l.end());
+    map[3] = 7;
+    REQUIRE(map[3] == 7);
+    REQUIRE(map.size() == 4);
+    REQUIRE(map[0] == 0);
+    REQUIRE(map.size() == 5);
 }
