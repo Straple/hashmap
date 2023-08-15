@@ -25,6 +25,8 @@ endif()
 add_catch(test_hashmap tests/benchmark/test.cpp)
 
 add_catch(test_unit
+        tests/unit/ctors.cpp
+
         tests/unit/insert.cpp
         tests/unit/emplace.cpp
         tests/unit/erase.cpp
@@ -43,6 +45,10 @@ add_catch(test_unit
         tests/unit/unique_ptr.cpp
 
         tests/unit/empty.cpp
+        )
+
+add_catch(counter_unit_test
+        tests/counter/test.cpp
         )
 
 add_executable(main main.cpp)
